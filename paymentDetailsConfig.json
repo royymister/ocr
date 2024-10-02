@@ -1,0 +1,49 @@
+{
+ "paymentDetailsPatterns": [
+   {
+     "label": "Subtotal",
+     "regex": "(?:Subtotal:|Subtotal Amount:|Sub-total:|Sub Total:|Sub Total Amount:)\\s*\\$?([\\d,]+\\.\\d{2})",
+     "key": "subtotal"
+   },
+   {
+     "label": "Discount",
+     "regex": "(?:Discount:|Discount Amount:|Total Discount:|Discount Applied:)\\s*\\$?([\\d,]+\\.\\d{2})",
+     "key": "discount"
+   },
+   {
+     "label": "Tax Rate",
+     "regex": "(?:Tax Rate:|Tax Percentage:|Tax %)\\s*([\\d]+(?:\\.\\d+)?)\\s*%",
+     "key": "taxRate"
+   },
+   {
+     "label": "Tax",
+     "regex": "(?:Tax:|Total Tax:|Tax Amount:)\\s*\\$?([\\d,]+\\.\\d{2})",
+     "key": "tax"
+   },
+   {
+     "label": "Total",
+     "regex": "(?:Total:|Total Amount:|Amount Due:|Final Total:)\\s*\\$?([\\d,]+\\.\\d{2})",
+     "key": "total"
+   },
+   {
+     "label": "Payment Due",
+     "regex": "(?:Payment Due:|Payment Due By:|Due Date:)\\s*([\\w\\s,\\-]+)",
+     "key": "paymentDue"
+   },
+   {
+     "label": "Invoice Number",
+     "regex": "(?:Invoice Number:|Invoice #:|Invoice No:|Inv No:)\\s*([\\w\\-]+)",
+     "key": "invoiceNumber"
+   },
+   {
+     "label": "Account Number",
+     "regex": "(?:Account Number:|Account No:|AC No:|Acc #:?)\\s*([\\d\\-]+)",
+     "key": "accountNumber"
+   },
+   {
+     "label": "Due Date",
+     "regex": "(?:Due Date:|Payment Due By:|Payment due by:)\\s*([\\w\\s,\\-]+)",
+     "key": "dueDate"
+   }
+ ]
+}
