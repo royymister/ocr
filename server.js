@@ -3,7 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const Tesseract = require('tesseract.js');
-require('dotenv').config();
+ 
 
 const app = express();
 const upload = multer({ dest: 'uploads/' });
