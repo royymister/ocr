@@ -31,19 +31,18 @@ while ((match = itemRegex.exec(ocrOutput)) !== null) {
 };
 
  
-
 const extractPaymentDetailsFromText = (ocrOutput) => {
   const paymentDetails = {};
 
-  // General patterns for various invoice formats
-  const totalRegex = /\b(?:Total Amount|Total Due|Grand Total|Total Payable|Total)\s*[:\-]?\s*\$?([\d,\.]+)/i;
-  const subtotalRegex = /\b(?:Sub-?Total|Item Total|Amount Before Tax|Pre-Tax Total)\s*[:\-]?\s*\$?([\d,\.]+)/i;
-  const discountRegex = /\b(?:Discount|Rebate|Promotional Discount|Savings)\s*[:\-]?\s*\$?([\d,\.]+)/i;
-  const taxRegex = /\b(?:Tax|Sales Tax|VAT|GST|Tax Rate)\s*[:\-]?\s*\$?([\d,\.]+)/i;
-  const accountNumberRegex = /\b(?:Account\s*#|A\/C\s*#|Account\s*Number)\s*[:\-]?\s*([\d\s]+)/i;
+  // General patterns for various invoice formats (with more variations)
+  const totalRegex = /\b(?:Total Amount|Total Due|Grand Total|Grand Total Amount|Total Payable|Total Price|TOTAL|TOTAL AMOUNT|Grant Total|TOTAL DUE|TOTAL PRICE)\s*[:\-]?\s*\$?([\d,\.]+)/i;
+  const subtotalRegex = /\b(?:Sub-?Total|SubTotal|SUB TOTAL|SUBTOTAL|Item Total|Amount Before Tax|Pre-Tax Total|Sub-?Amount)\s*[:\-]?\s*\$?([\d,\.]+)/i;
+  const discountRegex = /\b(?:Discount|DISCOUNT|Rebate|Promotional Discount|Savings|Deductions)\s*[:\-]?\s*\$?([\d,\.]+)/i;
+  const taxRegex = /\b(?:Tax|Sales Tax|VAT|GST|IGST|CGST|SGST|TAX|Tax Rate|TAX RATE)\s*[:\-]?\s*\$?([\d,\.]+)/i;
+  const accountNumberRegex = /\b(?:Account\s*#|A\/C\s*#|Account\s*Number|Account No\.|A\/C No)\s*[:\-]?\s*([\d\s]+)/i;
   const accountNameRegex = /\b(?:Account Name|A\/C Name|Acc Holder|Account Holder)\s*[:\-]?\s*(.+)/i;
-  const dateRegex = /\b(?:Date\s*Issued|Invoice\s*Date|Date)\s*[:\-]?\s*([\d\/\-]+)/i;
-  
+  const dateRegex = /\b(?:Date\s*Issued|Invoice\s*Date|Date|DATE|Dated)\s*[:\-]?\s*([\d\/\-]+)/i;
+  const invoiceNumberRegex = /\b(?:Invoice\s*#|Invoice\s*Number|INV No\.|Invoice No|INVOICE #)\s*[:\-]?\s*([\w\d\-]+)/i;
 
   // Extracting payment details dynamically
   const totalMatch = totalRegex.exec(ocrOutput);
@@ -53,7 +52,7 @@ const extractPaymentDetailsFromText = (ocrOutput) => {
   const accountNumberMatch = accountNumberRegex.exec(ocrOutput);
   const accountNameMatch = accountNameRegex.exec(ocrOutput);
   const dateMatch = dateRegex.exec(ocrOutput);
-  
+  const invoiceNumberMatch = invoiceNumberRegex.exec(ocrOutput);
 
   // Storing extracted details in paymentDetails object
   paymentDetails.total = totalMatch ? totalMatch[1] : 'Not found';
@@ -63,10 +62,11 @@ const extractPaymentDetailsFromText = (ocrOutput) => {
   paymentDetails.accountNumber = accountNumberMatch ? accountNumberMatch[1].trim() : 'Not found';
   paymentDetails.accountName = accountNameMatch ? accountNameMatch[1].trim() : 'Not found';
   paymentDetails.date = dateMatch ? dateMatch[1].trim() : 'Not found';
- 
+  paymentDetails.invoiceNumber = invoiceNumberMatch ? invoiceNumberMatch[1].trim() : 'Not found';
 
   return paymentDetails;
 };
+
 
 
 // Route to handle file upload and OCR processing
