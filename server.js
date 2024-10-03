@@ -4,10 +4,11 @@ const path = require('path');
 const Tesseract = require('tesseract.js');
 const fs = require('fs');
 const { PDFParser } = require('pdf2json');
-// const app = express();
+
+const app = express();
 const upload = multer({ dest: 'uploads/' });
 
-// app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Function to extract text from PDF
 const extractTextFromPDF = (filePath) => {
@@ -40,34 +41,35 @@ const extractItemsFromText = (ocrOutput) => {
 
   return items;
 };
+
 const extractPaymentDetailsFromText = (ocrOutput) => {
- const paymentDetails = {};
+  const paymentDetails = {};
 
- // Regular expressions for different variations of payment details
- const totalRegex = /TOTAL\s*[:\s]*\$?([\d,\.]+)/i; // More flexible for "TOTAL" with/without $ sign
- const taxRegex = /Tax(?: Rate)?\s*[:\s]*\$?([\d,\.]+)/i; // Handles "Tax" or "Tax Rate"
- const accountNumberRegex = /Account #\s*[:\s]*([\d\s]+)/i; // More flexible matching
- const accountNameRegex = /A\/C Name\s*[:\s]*(.+)/i; // A/C Name
- const dateRegex = /Date\s*[:\s]*([\d\/]+)/i; // Extract date with optional :
- const termsAndConditionsRegex = /Terms and Conditions\s*([\s\S]+?)\s*(Subtotal|Payment Info|Shipping)/i; // Handle dynamic content
+  // Regular expressions for different variations of payment details
+  const totalRegex = /TOTAL\s*[:\s]*\$?([\d,\.]+)/i;
+  const taxRegex = /Tax(?: Rate)?\s*[:\s]*\$?([\d,\.]+)/i;
+  const accountNumberRegex = /Account #\s*[:\s]*([\d\s]+)/i;
+  const accountNameRegex = /A\/C Name\s*[:\s]*(.+)/i;
+  const dateRegex = /Date\s*[:\s]*([\d\/]+)/i;
+  const termsAndConditionsRegex = /Terms and Conditions\s*([\s\S]+?)\s*(Subtotal|Payment Info|Shipping)/i;
 
- // Extracting payment details
- const totalMatch = totalRegex.exec(ocrOutput);
- const taxMatch = taxRegex.exec(ocrOutput);
- const accountNumberMatch = accountNumberRegex.exec(ocrOutput);
- const accountNameMatch = accountNameRegex.exec(ocrOutput);
- const dateMatch = dateRegex.exec(ocrOutput);
- const termsAndConditionsMatch = termsAndConditionsRegex.exec(ocrOutput);
+  // Extracting payment details
+  const totalMatch = totalRegex.exec(ocrOutput);
+  const taxMatch = taxRegex.exec(ocrOutput);
+  const accountNumberMatch = accountNumberRegex.exec(ocrOutput);
+  const accountNameMatch = accountNameRegex.exec(ocrOutput);
+  const dateMatch = dateRegex.exec(ocrOutput);
+  const termsAndConditionsMatch = termsAndConditionsRegex.exec(ocrOutput);
 
- // Storing extracted details in paymentDetails object
- paymentDetails.total = totalMatch ? totalMatch[1] : 'Not found';
- paymentDetails.tax = taxMatch ? taxMatch[1] : 'Not found';
- paymentDetails.accountNumber = accountNumberMatch ? accountNumberMatch[1].trim() : 'Not found';
- paymentDetails.accountName = accountNameMatch ? accountNameMatch[1].trim() : 'Not found';
- paymentDetails.date = dateMatch ? dateMatch[1].trim() : 'Not found';
- paymentDetails.termsAndConditions = termsAndConditionsMatch ? termsAndConditionsMatch[1].replace(/\n/g, ' ').trim() : 'Not found';
+  // Storing extracted details in paymentDetails object
+  paymentDetails.total = totalMatch ? totalMatch[1] : 'Not found';
+  paymentDetails.tax = taxMatch ? taxMatch[1] : 'Not found';
+  paymentDetails.accountNumber = accountNumberMatch ? accountNumberMatch[1].trim() : 'Not found';
+  paymentDetails.accountName = accountNameMatch ? accountNameMatch[1].trim() : 'Not found';
+  paymentDetails.date = dateMatch ? dateMatch[1].trim() : 'Not found';
+  paymentDetails.termsAndConditions = termsAndConditionsMatch ? termsAndConditionsMatch[1].replace(/\n/g, ' ').trim() : 'Not found';
 
- return paymentDetails;
+  return paymentDetails;
 };
 
 // Route to handle file upload and OCR processing
@@ -92,8 +94,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
       const { data: { text: ocrOutput } } = await Tesseract.recognize(filePath, 'eng');
       extractedText = ocrOutput;
     } else {
-      res.status(400).send('Unsupported file type. Please upload a JPEG, PNG, or PDF.');
-      return;
+      return res.status(400).send('Unsupported file type. Please upload a JPEG, PNG, or PDF.');
     }
 
     // Extract items and payment details from the text
