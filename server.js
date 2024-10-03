@@ -43,7 +43,7 @@ const extractPaymentDetailsFromText = (ocrOutput) => {
   const accountNumberRegex = /\b(?:Account\s*#|A\/C\s*#|Account\s*Number)\s*[:\-]?\s*([\d\s]+)/i;
   const accountNameRegex = /\b(?:Account Name|A\/C Name|Acc Holder|Account Holder)\s*[:\-]?\s*(.+)/i;
   const dateRegex = /\b(?:Date\s*Issued|Invoice\s*Date|Date)\s*[:\-]?\s*([\d\/\-]+)/i;
-  const termsAndConditionsRegex = /Terms and Conditions\s*([\s\S]+?)\s*(Subtotal|Payment Info|Shipping|Total)/i;
+  
 
   // Extracting payment details dynamically
   const totalMatch = totalRegex.exec(ocrOutput);
@@ -53,7 +53,7 @@ const extractPaymentDetailsFromText = (ocrOutput) => {
   const accountNumberMatch = accountNumberRegex.exec(ocrOutput);
   const accountNameMatch = accountNameRegex.exec(ocrOutput);
   const dateMatch = dateRegex.exec(ocrOutput);
-  const termsAndConditionsMatch = termsAndConditionsRegex.exec(ocrOutput);
+  
 
   // Storing extracted details in paymentDetails object
   paymentDetails.total = totalMatch ? totalMatch[1] : 'Not found';
@@ -63,9 +63,7 @@ const extractPaymentDetailsFromText = (ocrOutput) => {
   paymentDetails.accountNumber = accountNumberMatch ? accountNumberMatch[1].trim() : 'Not found';
   paymentDetails.accountName = accountNameMatch ? accountNameMatch[1].trim() : 'Not found';
   paymentDetails.date = dateMatch ? dateMatch[1].trim() : 'Not found';
-  paymentDetails.termsAndConditions = termsAndConditionsMatch
-    ? termsAndConditionsMatch[1].replace(/\n/g, ' ').trim()
-    : 'Not found';
+ 
 
   return paymentDetails;
 };
