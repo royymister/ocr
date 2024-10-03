@@ -1,124 +1,120 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 const Tesseract = require('tesseract.js');
- 
-
-const app = express();
+const fs = require('fs');
+const { PDFParser } = require('pdf2json');
+// const app = express();
 const upload = multer({ dest: 'uploads/' });
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// app.use(express.static(path.join(__dirname, 'public')));
 
-// Extract text from images using Tesseract
-const extractTextFromImage = async (imagePath) => {
-    try {
-        const { data: { text } } = await Tesseract.recognize(imagePath, 'eng');
-        return text;
-    } catch (error) {
-        throw new Error('Error extracting text with OCR: ' + error.message);
-    }
-};
-
-// Convert PDF to images (consider using a different library)
-const convertPDFToImages = async (filePath) => {
-    const outputDir = path.dirname(filePath);
-    const fileBaseName = path.basename(filePath, path.extname(filePath));
-    // You will need to implement this using a suitable library
-};
-
-// Function to extract items based on headers
-const extractItemsFromText = (text) => {
-    const lines = text.split('\n');
-    const items = [];
-    let headers = {};
-
-    lines.forEach(line => {
-        const normalizedLine = line.replace(/\s+/g, ' ').trim();
-
-        // Capture header line
-        if (!headers.description && normalizedLine.toLowerCase().includes('description')) {
-            headers = {
-                description: 'description',
-                unitCost: 'unit cost',
-                quantity: 'quantity',
-                amount: 'amount',
-            };
-            return; // Skip to the next line after setting headers
-        }
-
-        // Capture item lines after headers
-        if (Object.keys(headers).length > 0 && normalizedLine !== "") {
-            const itemPattern = /^(?<description>.+?)\s+(?<unitCost>\d+(\.\d{1,2})?)\s+(?<quantity>\d+)\s+(?<amount>[\d$]+)/;
-            const match = normalizedLine.match(itemPattern);
-
-            if (match) {
-                items.push({
-                    description: match.groups.description.trim(),
-                    unitCost: match.groups.unitCost,
-                    quantity: match.groups.quantity,
-                    amount: match.groups.amount,
-                });
-            }
-        }
+// Function to extract text from PDF
+const extractTextFromPDF = (filePath) => {
+  return new Promise((resolve, reject) => {
+    const pdfParser = new PDFParser();
+    pdfParser.on('pdfParser_dataError', errData => reject(errData.parserError));
+    pdfParser.on('pdfParser_dataReady', pdfData => {
+      let extractedText = pdfParser.getRawTextContent();
+      resolve(extractedText);
     });
-
-    return items;
+    pdfParser.loadPDF(filePath);
+  });
 };
 
-// Main endpoint to handle file upload and processing
-app.post('/', upload.single('file'), async (req, res) => {
-    const file = req.file;
+// Function to extract items from OCR text
+const extractItemsFromText = (ocrOutput) => {
+  const items = [];
+  const itemRegex = /(\d+)\s+(.+?)\s+\$([\d,\.]+)\s+(\d+)\s+\$([\d,\.]+)/g;
+  let match;
 
-    if (!file) {
-        return res.status(400).send('File is required.');
+  while ((match = itemRegex.exec(ocrOutput)) !== null) {
+    items.push({
+      Number: match[1],
+      Description: match[2].trim(),
+      Price: match[3],
+      Quantity: match[4],
+      Total: match[5],
+    });
+  }
+
+  return items;
+};
+const extractPaymentDetailsFromText = (ocrOutput) => {
+ const paymentDetails = {};
+
+ // Regular expressions for different variations of payment details
+ const totalRegex = /TOTAL\s*[:\s]*\$?([\d,\.]+)/i; // More flexible for "TOTAL" with/without $ sign
+ const taxRegex = /Tax(?: Rate)?\s*[:\s]*\$?([\d,\.]+)/i; // Handles "Tax" or "Tax Rate"
+ const accountNumberRegex = /Account #\s*[:\s]*([\d\s]+)/i; // More flexible matching
+ const accountNameRegex = /A\/C Name\s*[:\s]*(.+)/i; // A/C Name
+ const dateRegex = /Date\s*[:\s]*([\d\/]+)/i; // Extract date with optional :
+ const termsAndConditionsRegex = /Terms and Conditions\s*([\s\S]+?)\s*(Subtotal|Payment Info|Shipping)/i; // Handle dynamic content
+
+ // Extracting payment details
+ const totalMatch = totalRegex.exec(ocrOutput);
+ const taxMatch = taxRegex.exec(ocrOutput);
+ const accountNumberMatch = accountNumberRegex.exec(ocrOutput);
+ const accountNameMatch = accountNameRegex.exec(ocrOutput);
+ const dateMatch = dateRegex.exec(ocrOutput);
+ const termsAndConditionsMatch = termsAndConditionsRegex.exec(ocrOutput);
+
+ // Storing extracted details in paymentDetails object
+ paymentDetails.total = totalMatch ? totalMatch[1] : 'Not found';
+ paymentDetails.tax = taxMatch ? taxMatch[1] : 'Not found';
+ paymentDetails.accountNumber = accountNumberMatch ? accountNumberMatch[1].trim() : 'Not found';
+ paymentDetails.accountName = accountNameMatch ? accountNameMatch[1].trim() : 'Not found';
+ paymentDetails.date = dateMatch ? dateMatch[1].trim() : 'Not found';
+ paymentDetails.termsAndConditions = termsAndConditionsMatch ? termsAndConditionsMatch[1].replace(/\n/g, ' ').trim() : 'Not found';
+
+ return paymentDetails;
+};
+
+// Route to handle file upload and OCR processing
+app.post('/upload', upload.single('file'), async (req, res) => {
+  const file = req.file;
+
+  if (!file) {
+    return res.status(400).send('No file uploaded.');
+  }
+
+  const filePath = path.join(__dirname, file.path);
+  const fileExtension = path.extname(file.originalname).toLowerCase();
+
+  try {
+    let extractedText = '';
+
+    if (fileExtension === '.pdf') {
+      // Extract text from PDF
+      extractedText = await extractTextFromPDF(filePath);
+    } else if (['.jpg', '.jpeg', '.png'].includes(fileExtension)) {
+      // Extract text from image using Tesseract
+      const { data: { text: ocrOutput } } = await Tesseract.recognize(filePath, 'eng');
+      extractedText = ocrOutput;
+    } else {
+      res.status(400).send('Unsupported file type. Please upload a JPEG, PNG, or PDF.');
+      return;
     }
 
-    const filePath = path.join(__dirname, file.path);
-    const fileExtension = path.extname(file.originalname).toLowerCase();
+    // Extract items and payment details from the text
+    const extractedItems = extractItemsFromText(extractedText);
+    const paymentDetails = extractPaymentDetailsFromText(extractedText);
 
-    try {
-        let extractedText = '';
-
-        if (fileExtension === '.pdf') {
-            const imageFiles = await convertPDFToImages(filePath);
-
-            for (const image of imageFiles) {
-                const imageText = await extractTextFromImage(image);
-                extractedText += imageText + '\n';
-                fs.unlinkSync(image);
-            }
-            const items = extractItemsFromText(extractedText);
-
-            res.send({
-                message: 'PDF processed successfully',
-                extractedItems: items.length > 0 ? items : 'No items found in the PDF.',
-                text: extractedText,
-            });
-
-        } else if (['.jpg', '.jpeg', '.png'].includes(fileExtension)) {
-            const ocrOutput = await extractTextFromImage(filePath);
-            extractedText = ocrOutput;
-            const extractedItems = extractItemsFromText(extractedText);
-
-            res.send({
-                message: 'Text extracted successfully',
-                items: extractedItems,
-                text: extractedText,
-            });
-        } else {
-            return res.status(400).send('Unsupported file type. Please upload a PDF or image.');
-        }
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).send('An error occurred while processing the file.');
-    } finally {
-        fs.unlinkSync(filePath);
-    }
+    res.send({
+      message: 'Text extracted successfully',
+      paymentDetails: paymentDetails,
+      items: extractedItems,
+      text: extractedText,  
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('An error occurred while processing the file.');
+  } finally {
+    // Clean up the uploaded file
+    fs.unlinkSync(filePath);
+  }
 });
 
 app.listen(3000, () => {
-    console.log('Server started on http://localhost:3000');
+  console.log('Server started on http://localhost:3000');
 });
